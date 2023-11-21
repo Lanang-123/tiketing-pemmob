@@ -1,13 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:utswisata/pages/updateTicket.dart';
 import 'package:utswisata/services/databasehelper.dart';
 import 'package:utswisata/models/ticket.dart';
 import 'package:utswisata/pages/addTicket.dart';
 import 'package:utswisata/theme.dart';
-
-
 
 class TicketPage extends StatefulWidget {
   const TicketPage({super.key});
@@ -22,13 +21,50 @@ class _TicketPageState extends State<TicketPage> {
   TextEditingController _searchController = TextEditingController();
   late List<Ticket> _searchResult = [];
   late List<Ticket> _ticketList = [];
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
 
-  @override
-  void initState() {
-    super.initState();
-    _ticketListFuture = getTicketList();
+  Future<void> initializeNotification() async {
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('mipmap/ic_launcher');
+    const DarwinInitializationSettings darwinInitializationSettings =
+        DarwinInitializationSettings(
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: true,
+    );
+
+    const InitializationSettings initializationSettings =
+        InitializationSettings(
+      android: initializationSettingsAndroid,
+      iOS: darwinInitializationSettings,
+    );
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
 
+  Future<void> showNotification(
+    int id,
+    String title,
+    String body,
+  ) async {
+    const AndroidNotificationDetails androidNotificationDetails =
+        AndroidNotificationDetails('1', 'TTE',
+            channelDescription: 'Khusus notif TTE',
+            importance: Importance.max,
+            priority: Priority.high,
+            ticker: 'ticker');
+    const NotificationDetails notificationDetails =
+        NotificationDetails(android: androidNotificationDetails);
+    await flutterLocalNotificationsPlugin.show(
+      1,
+      title,
+      body,
+      notificationDetails,
+      payload: 'item x',
+    );
+  }
+
+  // awd
   Future<List<Ticket>> getTicketList() async {
     final List<Map<String, dynamic>> ticketMapList =
         await DatabaseHelper.instance.getTicketMapList();
@@ -50,6 +86,14 @@ class _TicketPageState extends State<TicketPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _ticketListFuture = getTicketList();
+    initializeNotification();
+    showNotification(1, 'Halo', 'Selamat Datang');
+  }
+
+  @override
   Widget build(BuildContext context) {
     double width = MediaQuery.of(context).size.width;
     double height = MediaQuery.of(context).size.height;
@@ -68,8 +112,7 @@ class _TicketPageState extends State<TicketPage> {
           children: [
             Container(
               margin: const EdgeInsets.only(top: 12),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               width: width,
               child: TextFormField(
                 controller: _searchController,
