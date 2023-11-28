@@ -1,12 +1,20 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:pdf/pdf.dart';
 import 'package:utswisata/pages/updateTicket.dart';
 import 'package:utswisata/services/databasehelper.dart';
 import 'package:utswisata/models/ticket.dart';
 import 'package:utswisata/pages/addTicket.dart';
 import 'package:utswisata/theme.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'dart:typed_data';
+import 'package:open_filex/open_filex.dart';
+import 'package:flutter_pdfview/flutter_pdfview.dart';
+// import 'package:flowder/flowder.dart';
 
 class TicketPage extends StatefulWidget {
   const TicketPage({super.key});
@@ -222,7 +230,7 @@ class _TicketPageState extends State<TicketPage> {
                             ),
                           ),
                           onTap: () {
-                            // do something when the item is tapped
+                            getPdf(ticket.title);
                           },
                         ),
                       );
@@ -248,5 +256,80 @@ class _TicketPageState extends State<TicketPage> {
         child: Icon(Icons.add),
       ),
     );
+  }
+}
+
+// Get PDF
+Future<void> getPdf(String title) async {
+  final pdf = pw.Document();
+
+  pdf.addPage(
+    pw.Page(
+      pageFormat: PdfPageFormat.a4,
+      build: (pw.Context context) => pw.Center(
+        child: pw.Text(title),
+      ),
+    ),
+  );
+
+  // final file = File('example.pdf');
+  // await file.writeAsBytes(await pdf.save());
+
+  // simpan
+  Uint8List bytes = await pdf.save();
+
+  // pembuatN file
+  final dir = await getApplicationDocumentsDirectory();
+  final name_file = File("${dir.path}/document.pdf");
+
+  await name_file.writeAsBytes(bytes);
+
+  // // open
+  // await OpenFilex.open(name_file.path);
+  PdfRun(filePath: name_file.path);
+}
+
+class PdfRun extends StatefulWidget {
+  final String filePath;
+  const PdfRun({super.key, required this.filePath});
+
+  @override
+  State<PdfRun> createState() => _PdfRunState();
+}
+
+class _PdfRunState extends State<PdfRun> {
+  final Completer<PDFViewController> _controller =
+      Completer<PDFViewController>();
+  int? pages = 0;
+  int? currentPage = 0;
+  bool isReady = false;
+  String errorMessage = '';
+
+  @override
+  Widget build(BuildContext context) {
+    print(widget.filePath);
+    return Scaffold(
+        body: PDFView(
+      filePath: widget.filePath,
+      enableSwipe: true,
+      swipeHorizontal: true,
+      autoSpacing: false,
+      pageFling: false,
+      onRender: (_pages) {
+        setState(() {
+          pages = _pages;
+          isReady = true;
+        });
+      },
+      onError: (error) {
+        print(error.toString());
+      },
+      onPageError: (page, error) {
+        print('$page: ${error.toString()}');
+      },
+      onViewCreated: (PDFViewController pdfViewController) {
+        _controller.complete(pdfViewController);
+      },
+    ));
   }
 }
