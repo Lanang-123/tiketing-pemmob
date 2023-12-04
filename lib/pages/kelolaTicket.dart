@@ -14,6 +14,8 @@ import 'package:pdf/widgets.dart' as pw;
 import 'dart:typed_data';
 import 'package:open_filex/open_filex.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
+import 'package:intl/intl.dart';
+
 // import 'package:flowder/flowder.dart';
 
 class TicketPage extends StatefulWidget {
@@ -230,7 +232,7 @@ class _TicketPageState extends State<TicketPage> {
                             ),
                           ),
                           onTap: () {
-                            getPdf(ticket.title);
+                            getPdf(ticket);
                           },
                         ),
                       );
@@ -260,34 +262,49 @@ class _TicketPageState extends State<TicketPage> {
 }
 
 // Get PDF
-Future<void> getPdf(String title) async {
+Future<void> getPdf(Ticket ticket) async {
   final pdf = pw.Document();
 
   pdf.addPage(
     pw.Page(
       pageFormat: PdfPageFormat.a4,
-      build: (pw.Context context) => pw.Center(
-        child: pw.Text(title),
-      ),
+      build: (pw.Context context) {
+        return pw.Center(
+          child: pw.Column(
+            mainAxisAlignment: pw.MainAxisAlignment.center,
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
+            children: [
+              pw.Container(
+                width: 500,
+                height: 200,
+                child:  pw.Image(pw.MemoryImage(Uint8List.fromList(File(ticket.image).readAsBytesSync()))),
+              ),
+              pw.SizedBox(height: 10),
+              pw.Text(ticket.title, style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+              pw.SizedBox(height: 10),
+              pw.Text(ticket.category, style: pw.TextStyle(fontSize: 12)),
+              pw.SizedBox(height: 10),
+              pw.Text(
+                '${NumberFormat.currency(locale: 'id', symbol: 'Rp', decimalDigits: 0).format(ticket.price)}',
+                style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+              ),
+            ],
+          ),
+        );
+      },
     ),
   );
 
-  // final file = File('example.pdf');
-  // await file.writeAsBytes(await pdf.save());
-
-  // simpan
   Uint8List bytes = await pdf.save();
 
-  // pembuatN file
   final dir = await getApplicationDocumentsDirectory();
   final name_file = File("${dir.path}/document.pdf");
 
   await name_file.writeAsBytes(bytes);
 
-  // // open
-  // await OpenFilex.open(name_file.path);
-  PdfRun(filePath: name_file.path);
+  await OpenFilex.open(name_file.path);
 }
+
 
 class PdfRun extends StatefulWidget {
   final String filePath;
